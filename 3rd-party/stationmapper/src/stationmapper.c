@@ -3,7 +3,16 @@
 #include "math.h"
 
 #ifdef _WIN32
-  #include "io.h"
+  #include <io.h>
+  #include <windows.h>
+  #include <wchar.h>
+
+  // Checking access to a file with UTF-8
+  static int access_utf8(const char *path, int mode) {
+      wchar_t w_path[MAX_PATH];
+      MultiByteToWideChar(CP_UTF8, 0, path, -1, w_path, MAX_PATH);
+      return _waccess(w_path, mode);
+  }
   #ifndef F_OK
   #define F_OK   0
   #endif
@@ -17,6 +26,7 @@
   #endif
 #else
   #include "unistd.h"
+  #define access_utf8 access
 #endif
 
 #include "../include/stationmapper.h"
@@ -36,12 +46,12 @@ const version_t get_library_version(void) {
 peace_of_map_t load_map(const char* image_filename, const char* config_filename) {
     peace_of_map_t map;
 
-    if(access(image_filename, F_OK) != 0) {
+    if(access_utf8(image_filename, F_OK) != 0) {
         printf("Failed to load map image file %s\n", image_filename);
         return map;
     }
 
-    if(access(config_filename, F_OK) != 0) {
+    if(access_utf8(config_filename, F_OK) != 0) {
         printf("Failed to load config file %s\n", config_filename);
         return map;
     }
@@ -50,8 +60,7 @@ peace_of_map_t load_map(const char* image_filename, const char* config_filename)
     if (err)
 		printf("LoadBMP Load Error: %u\n", err);
     
-    FILE *fp;
-    fp = fopen(config_filename, "r");
+    FILE *fp = FOPEN_UTF8(config_filename, "r");
     fscanf(fp, "%*[^\n]\n");
     fscanf(fp, "%f, %f, %f, %f\n", &map.top_left_lat, &map.top_left_lon, &map.bottom_right_lat, &map.bottom_right_lon);
     fclose(fp);
@@ -110,7 +119,7 @@ stations_list_t load_stations(const char *stations_list_filename) {
     stations_list.stations = NULL;
 
     // Open file and check for errors
-    FILE *fp = fopen(stations_list_filename, "r");
+    FILE *fp = FOPEN_UTF8(stations_list_filename, "r");
     if (fp == NULL) {
         printf("Failed to open stations file: %s\n", stations_list_filename);
         return stations_list;

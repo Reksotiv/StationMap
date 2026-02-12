@@ -9,7 +9,8 @@
 #include "string.h"
 #include "math.h"
 #include "stdlib.h"
-#include <stationmapper.h>
+#include "stationmapper.h"
+
 
 #if defined Q_OS_WIN && _MSC_VER
 #include <dwmapi.h>
@@ -130,8 +131,8 @@ void MainWindow::on_pushButton_calculate_clicked()
     qDebug().nospace() << "Using stationmapper " << version.major << "." << version.minor << "." << version.patch;
 
     // Load map and stations list
-    peace_of_map_t map = load_map(m_mapImg.fileName().toStdString().c_str(), m_mapCsv.fileName().toStdString().c_str());
-    stations_list_t stations = load_stations(m_stations.fileName().toStdString().c_str());
+    peace_of_map_t map = load_map(m_mapImg.fileName().toUtf8().constData(), m_mapCsv.fileName().toUtf8().constData());
+    stations_list_t stations = load_stations(m_stations.fileName().toUtf8().constData());
 
     // Get user's location
     float user_lat = ui->doubleSpinBox_lat->value();
@@ -143,6 +144,7 @@ void MainWindow::on_pushButton_calculate_clicked()
     // Draw all stations
     for (int i = 0; i < stations.num_stations; i++) {
         draw_point_by_lat_lon(&map, stations.stations[i].lat, stations.stations[i].lon, 255, 0, 0, 155);
+        qDebug()<<stations.stations[i].lat << stations.stations[i].lon;
     }
 
     // Nearest station search
@@ -179,12 +181,29 @@ void MainWindow::fileSelected()
 {
     if (m_mapCsv.exists()) {
         float l_lat, l_lon, r_lat, r_lon;
-        // copied from stationmapper.c
-        FILE *fp;
-        fp = fopen(m_mapCsv.fileName().toStdString().c_str(), "r");
-        fscanf(fp, "%*[^\n]\n");
-        fscanf(fp, "%f, %f, %f, %f\n", &l_lat, &l_lon, &r_lat, &r_lon);
-        fclose(fp);
+
+        QFile file(m_mapCsv.fileName());
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return;
+        }
+
+        QTextStream in(&file);
+        in.readLine();  // Skip header
+
+        if (!in.atEnd()) {
+            QString line = in.readLine();
+            QStringList parts = line.split(',', Qt::SkipEmptyParts);
+
+            if (parts.size() >= 4) {
+                l_lat = parts[0].trimmed().toFloat();
+                l_lon = parts[1].trimmed().toFloat();
+                r_lat = parts[2].trimmed().toFloat();
+                r_lon = parts[3].trimmed().toFloat();
+            }
+        }
+
+        file.close();
+
 
         ui->doubleSpinBox_lat->setMinimum(qMin(l_lat, r_lat));
         ui->doubleSpinBox_lat->setMaximum(qMax(l_lat, r_lat));

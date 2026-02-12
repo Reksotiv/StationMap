@@ -81,6 +81,20 @@ LOADBMP_API unsigned int loadbmp_encode_file(
 	const char *filename, const unsigned char *imageData, unsigned int width, unsigned int height, unsigned int components);
 
 
+#ifdef _WIN32
+#include <windows.h>
+// A function for opening files with UTF-8 paths on Windows
+static FILE* fopen_utf8(const char* filename, const wchar_t* mode) {
+    wchar_t w_filename[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, filename, -1, w_filename, MAX_PATH);
+    return _wfopen(w_filename, mode);
+}
+#define FOPEN_UTF8(filename, mode) fopen_utf8(filename, L##mode)
+#else
+#define FOPEN_UTF8(filename, mode) fopen(filename, mode)
+#endif
+
+
 #ifdef LOADBMP_IMPLEMENTATION
 
 // Disable Microsoft Visual C++ compiler security warnings for fopen, strcpy, etc being unsafe
@@ -96,7 +110,7 @@ LOADBMP_API unsigned int loadbmp_encode_file(
 LOADBMP_API unsigned int loadbmp_decode_file(
 	const char *filename, unsigned char **imageData, unsigned int *width, unsigned int *height, unsigned int components)
 {
-	FILE *f = fopen(filename, "rb");
+	FILE *f = FOPEN_UTF8(filename, "rb");
 
 	if (!f)
 		return LOADBMP_FILE_NOT_FOUND;
@@ -195,7 +209,7 @@ LOADBMP_API unsigned int loadbmp_decode_file(
 LOADBMP_API unsigned int loadbmp_encode_file(
 	const char *filename, const unsigned char *imageData, unsigned int width, unsigned int height, unsigned int components)
 {
-	FILE *f = fopen(filename, "wb");
+	FILE *f = FOPEN_UTF8(filename, "wb");
 
 	if (!f)
 		return LOADBMP_FILE_OPERATION;
