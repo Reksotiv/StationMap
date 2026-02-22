@@ -174,6 +174,7 @@ void MainWindow::on_pushButton_calculate_clicked()
 
     // Cleanup
     free(map.image);
+    free(stations.stations);
 }
 
 
