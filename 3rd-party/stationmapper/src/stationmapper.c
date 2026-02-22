@@ -94,14 +94,13 @@ void add_pixel(unsigned char * image, int width, int x, int y, int r, int g, int
 
 
 void draw_point_by_lat_lon(peace_of_map_t * map, float lat, float lon, int r, int g, int b, int a) {
-    int x = map->width * ((lon - map->bottom_right_lon) / (map->top_left_lon - map->bottom_right_lon));
-    int y = map->height - map->height * ((lat - map->bottom_right_lat) / (map->top_left_lat - map->bottom_right_lat)) - 1;
+    int x = map->width * ((map->top_left_lon - lon) / (map->top_left_lon - map->bottom_right_lon));
+    int y = map->height * ((map->top_left_lat - lat) / (map->top_left_lat - map->bottom_right_lat));
     if ((x < 0) || (x >= map->width) || (y < 0) || (y > map->height)) {
         printf("Incorrect lat lon: %f %f\n", lat, lon);
         return;
     }
     
-
     for (int i = -5; i < 5; i++) {
         for (int j = -5; j < 5; j++) {
             if ((x + i < 0) || (x + i >= map->width) || (y + j < 0) || (y + j > map->height)) {
